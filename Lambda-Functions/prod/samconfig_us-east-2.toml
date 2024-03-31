@@ -1,0 +1,11 @@
+version = 0.1
+[default]
+[default.deploy]
+[default.deploy.parameters]
+stack_name = "lambda-cicd-prod-stack" # Update Cloudformation Stack name in "{Function Name}-stack"
+s3_bucket = "sam-lambda-cicd-bucket" 
+region = "us-east-2" # Change region as per requirement
+confirm_changeset = true
+capabilities = "CAPABILITY_IAM" 
+disable_rollback = true
+image_repositories = []
