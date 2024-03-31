@@ -1,0 +1,65 @@
+name: Deploy Lambda 
+on:
+  workflow_dispatch:
+    inputs:
+      region:
+        description: 'Region'
+        type: choice
+        required: true
+        default: 'us-east-2'
+        options:
+        - us-east-2
+        - ca-central-1
+        - eu-west-2
+      deploy_path:
+        description: 'Path of lambda template'
+        type: string
+        required: true
+        default: 'lambda-cicd-prod'  
+jobs:
+  build-deploy:
+    runs-on: ubuntu-20.04
+    permissions:
+        issues: write
+        id-token: write
+        contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.18'
+      - name: Configure private token
+        env:
+          GH_ACCESS_TOKEN: ${{ secrets.GLOBAL_GITHUB_HTTPS_TOKEN }}
+        run: |
+          git config --global url."https://${GH_ACCESS_TOKEN}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 18
+      - uses: aws-actions/setup-sam@v2
+      - uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: arn:aws:iam::532968567499:role/OhIAMGithubActions-LambdaDeploy
+          aws-region: ${{ inputs.region }}
+      # sam build 
+      - name: SAM Build
+        run: | 
+          cd ${{ github.workspace }}/${{ inputs.deploy_path }}
+          aws codeartifact login --tool pip --domain prodigaltech --domain-owner 532968567499 --repository propy --region us-east-2
+          sam build -t template_${{ inputs.region }}.yaml
+
+      - name: Approval
+        uses: trstringer/manual-approval@v1
+        with:
+          secret: ${{ github.TOKEN }}
+          approvers: RahulGP14
+          timeout-minutes: 10
+          minimum-approvals: 1
+      # sam deploy
+      - name: SAM Deploy
+        run: | 
+          cd ${{ github.workspace }}/${{ inputs.deploy_path }}
+          sam deploy --config-file samconfig_${{ inputs.region }}.toml --no-confirm-changeset
