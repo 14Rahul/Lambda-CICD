@@ -38,7 +38,7 @@ jobs:
           git config --global url."https://${GH_ACCESS_TOKEN}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
       - uses: actions/setup-node@v3
         with:
-          node-version: 18
+          node-version: 20
       - uses: aws-actions/setup-sam@v2
       - uses: aws-actions/configure-aws-credentials@v2
         with:
