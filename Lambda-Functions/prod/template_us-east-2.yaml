@@ -1,0 +1,67 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  lambda-cicd
+
+  Sample SAM Template for lambda-cicd
+
+Resources:
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: LambdaCICDFunctionSG # Security group name "{Function Name}SG"
+      GroupDescription: Allow HTTP traffic to the host
+      VpcId: vpc-4645182e
+      SecurityGroupEgress:
+      - IpProtocol: "-1"
+        CidrIp: 0.0.0.0/0
+  LambdaCICDFunctionProd:
+    Type: AWS::Serverless::Function 
+    Properties:
+      FunctionName: LambdaCICDFunctionProd # Function Name
+      CodeUri: code/ 
+      Handler: lambda_function.lambda_handler # Lambda Handler For Nodejs index.handler
+      Runtime: python3.9 # Runtime Programming Language 
+      Tracing: Active 
+      Timeout: 10 # Lambda Timeout in seconds
+      MemorySize: 256 # Memory size
+      Role: arn:aws:iam::532968567499:role/OhQupidCleanupLambdaRole # Devops team Will create and provide ARN to use
+      Architectures:
+        - x86_64
+      Environment:
+        Variables:
+          ENVIRONMENT_VERIABLE: Environment-value # Add environment variables
+      VpcConfig:
+        SecurityGroupIds:
+          - Ref: SecurityGroup
+        SubnetIds:
+          - subnet-01f783605e41b71ba
+      Events:
+          EventBridgeCron:
+            Type: Schedule
+            Properties:
+              Schedule: cron(0 14 * * ? *) # Eventbridge function cron expression to trigger lambda based on schedule
+              Name: LambdaCICDFunctionDev-Schedule # Eventbridge rule name
+              Description: Example schedule
+              Enabled: false
+          Sqstrigger:
+            Type: SQS
+            Properties:
+              Queue: arn:aws:sqs:us-east-2:532968567499:lambdacicdtestsqs
+              BatchSize: 10
+              Enabled: false
+          Snstrigger:
+            Type: SNS
+            Properties:
+              Topic: arn:aws:sns:us-east-2:532968567499:Prashanttest
+      FileSystemConfigs: 
+        - Arn: >- 
+            arn:aws:elasticfilesystem:us-east-2:532968567499:access-point/fsap-0d71105786e1d71a0 
+          LocalMountPath: /mnt/efs # Mount path
+      Layers: 
+        - arn:aws:lambda:us-east-2:532968567499:layer:libs:1 # Lambda layer ARN
+
+Outputs:
+  LambdaCICDFunctionProd:
+    Description: "us-east-2 Cupid Cleanup Lambda Function ARN" 
+    Value: !GetAtt LambdaCICDFunctionProd.Arn
